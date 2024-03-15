@@ -136,7 +136,8 @@ namespace OniExtract2
                 {
                     var anim = data.GetAnim(indexGetAnim);
 
-                    var firstFrame = anim.GetFrame(anim.animFile.animBatchTag, 0);
+                    KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
+                    anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame);
                     var animationName = kanimPrefix + anim.name;
 
                     // Find good anims for all
@@ -145,7 +146,13 @@ namespace OniExtract2
                         Debug.Log(this.prefabId + "_" + anim.name);
                         for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
                         {
-                            var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
+                            //var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
+                            KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                            if (batchGroupData == null)
+                            {
+                                continue;
+                            }
+                            var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
                             var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
 
                             //Debug.Log(frameElementName);
@@ -200,7 +207,13 @@ namespace OniExtract2
 
                     for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
                     {
-                        var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
+                        //var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
+                        KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                        if (batchGroupData == null)
+                        {
+                            continue;
+                        }
+                        var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
                         var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
 
                         if (isUtility && "outline".Equals(frameElement.symbol.DebuggerDisplay)) continue;
@@ -280,7 +293,13 @@ namespace OniExtract2
                         newSpriteModifier.name = animationName;
 
                         var indexElement = firstFrame.firstElementIdx + 0;
-                        var frameElement = data.GetAnimFrameElement(indexElement);
+                        //var frameElement = data.GetAnimFrameElement(indexElement);
+                        KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                        if (batchGroupData == null)
+                        {
+                            continue;
+                        }
+                        var frameElement = batchGroupData.GetFrameElement(indexElement);
                         LoadSpriteModifier(kanimPrefix, newSpriteModifier, frameElement);
 
                         AddSpriteInfo(export, newSpriteModifier, data, frameElement, isUtility && !isUi && !isPlace);
@@ -300,7 +319,13 @@ namespace OniExtract2
                             indexElement < firstFrame.firstElementIdx + firstFrame.numElements;
                             indexElement++)
                         {
-                            var frameElement = data.GetAnimFrameElement(indexElement);
+                            //var frameElement = data.GetAnimFrameElement(indexElement);
+                            KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                            if (batchGroupData == null)
+                            {
+                                continue;
+                            }
+                            var frameElement = batchGroupData.GetFrameElement(indexElement);
 
                             var newSpriteModifier = new BSpriteModifier();
                             export.spriteModifiers.Add(newSpriteModifier);
@@ -359,7 +384,7 @@ namespace OniExtract2
                         try
                         {
                             int symbolFrameIndex = s.frameLookup[frameElement.frame];
-                            var newSpriteInfo = new BSpriteInfo(spriteModifier.spriteInfoName, data.build.frames[symbolFrameIndex], data.build.GetTexture(0));
+                            var newSpriteInfo = new BSpriteInfo(spriteModifier.spriteInfoName, s.GetFrame(symbolFrameIndex), data.build.GetTexture(0));
 
                             // Solid white texture for wire colors
                             // Texture does not exist in Oni, has to be generated by PIXI

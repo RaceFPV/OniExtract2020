@@ -71,7 +71,9 @@ namespace OniExtract2
 
                 var animationName = kanimPrefix + anim.name;
 
-                var firstFrame = anim.GetFrame(anim.animFile.animBatchTag, 0);
+                // var firstFrame = anim.GetFrame(anim.animFile.animBatchTag, 0);
+                var firstFrame = new KAnim.Anim.Frame();
+                anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame);
 
                 if (firstFrame.numElements == 0)
                 {
@@ -86,7 +88,13 @@ namespace OniExtract2
                     newSpriteModifier.name = animationName;
 
                     var indexElement = firstFrame.firstElementIdx + 0;
-                    var frameElement = data.GetAnimFrameElement(indexElement);
+                    //var frameElement = data.GetAnimFrameElement(indexElement);
+                    KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                    if(batchGroupData == null)
+                    {
+                        continue;
+                    }
+                    var frameElement = batchGroupData.GetFrameElement(indexElement);
 
                     BBuildingFinal.LoadSpriteModifier(kanimPrefix, newSpriteModifier, frameElement);
                     BBuildingFinal.AddSpriteInfo(export, newSpriteModifier, data, frameElement, false);

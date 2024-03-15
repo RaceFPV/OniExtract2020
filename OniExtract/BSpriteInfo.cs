@@ -22,7 +22,7 @@ namespace OniExtract2
             this.name = name;
         }
 
-        public BSpriteInfo(string name, KAnim.Build.SymbolFrame symbolFrame, Texture2D texture)
+        public BSpriteInfo(string name, KAnim.Build.SymbolFrameInstance symbolFrame, Texture2D texture)
         {
             this.name = name;
             this.isIcon = name.Contains("_ui");
