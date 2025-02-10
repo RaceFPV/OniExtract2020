@@ -14,15 +14,41 @@ namespace OniExtract2
         public List<BuildMenuCategory> buildMenuCategories;
         public List<BuildMenuItem> buildMenuItems;
         public List<BElement> elements;
+        public Dictionary<string, List<string>> spriteRelationships;
 
         public Export()
         {
             buildings = new List<BBuildingFinal>();
             uiSprites = new List<BSpriteInfo>();
             spriteModifiers = new List<BSpriteModifier>();
+            spriteRelationships = new Dictionary<string, List<string>>();
 
             AddCustomSprites();
             AddCustomModifiers();
+        }
+
+        public void AddSpriteInfo(BSpriteInfo sprite)
+        {
+            uiSprites.Add(sprite);
+            
+            // Track relationships
+            if (sprite.relatedSprites != null && sprite.relatedSprites.Count > 0)
+            {
+                spriteRelationships[sprite.name] = sprite.relatedSprites;
+                
+                // Add reverse relationships
+                foreach (var related in sprite.relatedSprites)
+                {
+                    if (!spriteRelationships.ContainsKey(related))
+                    {
+                        spriteRelationships[related] = new List<string>();
+                    }
+                    if (!spriteRelationships[related].Contains(sprite.name))
+                    {
+                        spriteRelationships[related].Add(sprite.name);
+                    }
+                }
+            }
         }
 
         public void AddCustomSprites()
