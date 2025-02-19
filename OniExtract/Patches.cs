@@ -381,24 +381,34 @@ namespace OniExtract2
                 export.buildMenuCategories = new List<BuildMenuCategory>();
                 export.buildMenuItems = new List<BuildMenuItem>();
 
-                foreach (var planInfo in TUNING.BUILDINGS.PLANORDER)
+                foreach (var category in TUNING.BUILDINGS.PLANORDER)
                 {
-                    if (export.buildMenuCategories.Count(b => b.category == planInfo.category.HashValue) == 0)
+                    if (export.buildMenuCategories.Count(b => b.category == category.category.HashValue) == 0)
+                    {
                         export.buildMenuCategories.Add(new BuildMenuCategory()
                         {
-                            category = planInfo.category.HashValue,
-                            categoryName = BuildMenuCategory.GetName(planInfo.category.HashValue),
-                            categoryIcon = BuildMenuCategory.GetIcon(planInfo.category.HashValue)
+                            category = category.category.HashValue,
+                            categoryName = BuildMenuCategory.GetName(category.category.HashValue),
+                            categoryIcon = BuildMenuCategory.GetIcon(category.category.HashValue)
                         });
+                    }
 
-                    var buildings = (List<string>)planInfo.data;
-                    foreach (var building in buildings)
-                        export.buildMenuItems.Add(new BuildMenuItem()
+                    // Get buildings directly from category data
+                    #pragma warning disable 618
+                    var buildings = category.data as List<string>;
+                    #pragma warning restore 618
+                    
+                    if (buildings != null)
+                    {
+                        foreach (var building in buildings)
                         {
-                            category = planInfo.category.HashValue,
-                            buildingId = building
-                        });
-
+                            export.buildMenuItems.Add(new BuildMenuItem()
+                            {
+                                category = category.category.HashValue,
+                                buildingId = building
+                            });
+                        }
+                    }
                 }
             }
 

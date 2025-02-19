@@ -124,246 +124,79 @@ namespace OniExtract2
             foreach (var p in b.AnimFiles)
             {
                 var data = p.GetData();
-
                 if (data.build.textureCount > 0)
                 {
                     textureName = data.build.GetTexture(0).name;
-                    if (OniExtract_Game_OnPrefabInit.saveBuildingTexture) OniExtract_Game_OnPrefabInit.SaveTexture(textureName, data.build.GetTexture(0));
-                }
+                    if (OniExtract_Game_OnPrefabInit.saveBuildingTexture)
+                        OniExtract_Game_OnPrefabInit.SaveTexture(textureName, data.build.GetTexture(0));
 
-                kanimPrefix = b.PrefabID + "_";
-                for (int indexGetAnim = 0; indexGetAnim < data.animCount; ++indexGetAnim)
-                {
-                    var anim = data.GetAnim(indexGetAnim);
-
-                    KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
-                    anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame);
-                    var animationName = kanimPrefix + anim.name;
-
-                    // Find good anims for all
-                    if (true)
+                    kanimPrefix = b.PrefabID + "_";
+                    for (int indexGetAnim = 0; indexGetAnim < data.animCount; ++indexGetAnim)
                     {
-                        Debug.Log(this.prefabId + "_" + anim.name);
+                        var anim = data.GetAnim(indexGetAnim);
+                        
+                        // Skip unwanted animations
+                        if (anim.name.Contains("working") || 
+                            anim.name.Contains("pst") || 
+                            anim.name.Contains("ui") || 
+                            anim.name.Contains("place"))
+                        {
+                            continue;
+                        }
+
+                        // Only process the "off" state for static building appearance
+                        if (anim.name != "off")
+                        {
+                            continue;
+                        }
+
+                        var spriteGroup = new List<BSpriteInfo>();
+
+                        KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
+                        if (!anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame))
+                            continue;
+
+                        var animationName = kanimPrefix + anim.name;
+                        
+                        // Remove restrictive filtering - process all sprites
+                        // if (!isUi && !isPlace && !isUtility && !isBridge && !isDefaultKanim)
+                        //    continue;
+
+                        // Process all elements in the frame
                         for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
                         {
-                            //var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
                             KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
-                            if (batchGroupData == null)
-                            {
-                                continue;
-                            }
+                            if (batchGroupData == null) continue;
+
                             var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
                             var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
 
-                            //Debug.Log(frameElementName);
+                            // Create and add sprite modifier
+                            var spriteModifier = new BSpriteModifier();
+                            spriteModifier.name = frameElementName;
+                            LoadSpriteModifier(kanimPrefix, spriteModifier, frameElement);
+                            export.spriteModifiers.Add(spriteModifier); // Ensure modifier is added to export
+                            
+                            // Add to building's sprite list
+                            this.sprites.spriteNames.Add(frameElementName);
+
+                            // Create sprite info with relationships
+                            var symbolFrameInstance = data.build.GetSymbol(frameElement.symbol).GetFrame(frameElement.frame);
+                            var spriteInfo = new BSpriteInfo(frameElementName, symbolFrameInstance, data.build.GetTexture(0));
+                            
+                            // Link related sprites
+                            foreach (var existingSprite in spriteGroup)
+                            {
+                                spriteInfo.AddRelatedSprite(existingSprite.name);
+                                existingSprite.AddRelatedSprite(spriteInfo.name);
+                            }
+                            spriteGroup.Add(spriteInfo);
+
+                            // Add to export
+                            export.AddSpriteInfo(spriteInfo);
                         }
                     }
-                    if (this.prefabId.Contains("Door")) this.DefaultAnimState = "closed";
-                    if (this.prefabId.Equals("BatteryMedium")) this.DefaultAnimState = "on";
-                    if (this.prefabId.Equals("LogicRibbonReader")) this.DefaultAnimState = "idle";
-                    if (this.prefabId.Equals("LogicRibbonWriter")) this.DefaultAnimState = "idle";
-                    if (this.prefabId.Equals("FloorSwitch")) this.DefaultAnimState = "off_up";
-
-                    bool isUi = anim.name.Equals("ui");
-                    bool isPlace = anim.name.Contains("place");
-                    bool isDefaultKanim = anim.name.Equals(this.DefaultAnimState);
-
-                    if (!isUi &&
-                        !isPlace &&
-                        !isUtility &&
-                        !isBridge &&
-                        !isDefaultKanim) continue;
-
-
-
-
-                    /*
-                    newSpriteModifier.framebboxMin = new BVector2(firstFrame.bbox.min);
-                    newSpriteModifier.framebboxMax = new BVector2(firstFrame.bbox.max);
-                    newSpriteModifier.center = new BVector3(firstFrame.bbox.Center);
-                    newSpriteModifier.range = new BVector3(firstFrame.bbox.Range);
-                    newSpriteModifier.width = firstFrame.bbox.Width;
-                    newSpriteModifier.height = firstFrame.bbox.Height;
-                    newSpriteModifier.depth = firstFrame.bbox.Depth;
-                    */
-
-                    bool logSup = false;
-                    if (firstFrame.numElements > 1)
-                    {
-                        logSup = true;
-                        //Debug.Log("*************");
-                        //Debug.Log(b.PrefabID);
-                    }
-
-                    // Logic :
-                    // If there is only one or two elements, take the last one, it is a "Place" or a "Solid"
-                    // If there is three, it is a tileable thing
-
-                    if (firstFrame.numElements == 0)
-                    {
-                        //Debug.Log("0 element for : " + animationName);
-                        continue;
-                    }
-
-                    for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
-                    {
-                        //var frameElement = data.GetAnimFrameElement(firstFrame.firstElementIdx + indexElement);
-                        KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
-                        if (batchGroupData == null)
-                        {
-                            continue;
-                        }
-                        var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
-                        var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
-
-                        if (isUtility && "outline".Equals(frameElement.symbol.DebuggerDisplay)) continue;
-
-                        var newSpriteModifier = new BSpriteModifier();
-
-                        if (isPlace) newSpriteModifier.tags.Add(SpriteTag.place);
-                        else if (isUi) newSpriteModifier.tags.Add(SpriteTag.ui);
-                        else newSpriteModifier.tags.Add(SpriteTag.solid);
-
-
-
-                        newSpriteModifier.name = frameElementName;
-                        LoadSpriteModifier(kanimPrefix, newSpriteModifier, frameElement);
-
-                        string[] left = new string[] { "place_left", "cap_left", "cap_left_place", "cap_left_fg" };
-                        string[] right = new string[] { "place_right", "cap_right", "cap_right_place", "cap_right_fg" };
-                        string[] top = new string[] { "cap_top_place", "cap_top", "cap_topx" };
-                        string[] bottom = new string[] { "cap_bottom_place", "cap_bottom", "cap_bottomx" };
-                        if (isUtility)
-                        {
-                            newSpriteModifier.tags.Add(SpriteTag.connection);
-                            if (anim.name.Equals("None_place") || anim.name.Equals("None")) newSpriteModifier.tags.Add(SpriteTag.noConnection);
-                            else if (anim.name.Equals("LRUD_place") || anim.name.Equals("LRUD")) newSpriteModifier.tags.Add(SpriteTag.LRUD);
-                            else if (anim.name.Equals("LRD_place") || anim.name.Equals("LRD")) newSpriteModifier.tags.Add(SpriteTag.LRD);
-                            else if (anim.name.Equals("RUD_place") || anim.name.Equals("RUD")) newSpriteModifier.tags.Add(SpriteTag.RUD);
-                            else if (anim.name.Equals("LRU_place") || anim.name.Equals("LRU")) newSpriteModifier.tags.Add(SpriteTag.LRU);
-                            else if (anim.name.Equals("LUD_place") || anim.name.Equals("LUD")) newSpriteModifier.tags.Add(SpriteTag.LUD);
-                            else if (anim.name.Equals("LR_place") || anim.name.Equals("LR")) newSpriteModifier.tags.Add(SpriteTag.LR);
-                            else if (anim.name.Equals("UD_place") || anim.name.Equals("UD")) newSpriteModifier.tags.Add(SpriteTag.UD);
-                            else if (anim.name.Equals("LD_place") || anim.name.Equals("LD")) newSpriteModifier.tags.Add(SpriteTag.LD);
-                            else if (anim.name.Equals("LU_place") || anim.name.Equals("LU")) newSpriteModifier.tags.Add(SpriteTag.LU);
-                            else if (anim.name.Equals("RD_place") || anim.name.Equals("RD")) newSpriteModifier.tags.Add(SpriteTag.RD);
-                            else if (anim.name.Equals("RU_place") || anim.name.Equals("RU")) newSpriteModifier.tags.Add(SpriteTag.RU);
-                            else if (anim.name.Equals("L_place") || anim.name.Equals("L")) newSpriteModifier.tags.Add(SpriteTag.L);
-                            else if (anim.name.Equals("U_place") || anim.name.Equals("U")) newSpriteModifier.tags.Add(SpriteTag.U);
-                            else if (anim.name.Equals("D_place") || anim.name.Equals("D")) newSpriteModifier.tags.Add(SpriteTag.D);
-                            else if (anim.name.Equals("R_place") || anim.name.Equals("R")) newSpriteModifier.tags.Add(SpriteTag.R);
-                        }
-                        else if (left.Contains(frameElement.symbol.DebuggerDisplay))
-                        {
-                            this.tileableLeftRight = true;
-                            newSpriteModifier.tags.Add(SpriteTag.tileable_left);
-                            newSpriteModifier.tags.Add(SpriteTag.tileable);
-                        }
-                        else if (right.Contains(frameElement.symbol.DebuggerDisplay))
-                        {
-                            this.tileableLeftRight = true;
-                            newSpriteModifier.tags.Add(SpriteTag.tileable_right);
-                            newSpriteModifier.tags.Add(SpriteTag.tileable);
-                        }
-                        else if (top.Contains(frameElement.symbol.DebuggerDisplay))
-                        {
-                            this.tileableTopBottom = true;
-                            newSpriteModifier.tags.Add(SpriteTag.tileable_up);
-                            newSpriteModifier.tags.Add(SpriteTag.tileable);
-                        }
-                        else if (bottom.Contains(frameElement.symbol.DebuggerDisplay))
-                        {
-                            this.tileableTopBottom = true;
-                            newSpriteModifier.tags.Add(SpriteTag.tileable_down);
-                            newSpriteModifier.tags.Add(SpriteTag.tileable);
-                        }
-
-                        if (AddSpriteInfo(export, newSpriteModifier, data, frameElement, isUtility && !isUi && !isPlace))
-                        {
-                            this.sprites.spriteNames.Add(newSpriteModifier.name);
-                            export.spriteModifiers.Add(newSpriteModifier);
-                        }
-
-                    }
-
-                    if (firstFrame.numElements == 1 || firstFrame.numElements == 2)
-                    {
-                        var newSpriteModifier = new BSpriteModifier();
-                        export.spriteModifiers.Add(newSpriteModifier);
-                        newSpriteModifier.name = animationName;
-
-                        var indexElement = firstFrame.firstElementIdx + 0;
-                        //var frameElement = data.GetAnimFrameElement(indexElement);
-                        KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
-                        if (batchGroupData == null)
-                        {
-                            continue;
-                        }
-                        var frameElement = batchGroupData.GetFrameElement(indexElement);
-                        LoadSpriteModifier(kanimPrefix, newSpriteModifier, frameElement);
-
-                        AddSpriteInfo(export, newSpriteModifier, data, frameElement, isUtility && !isUi && !isPlace);
-
-                        continue;
-                    }
-                    else if (firstFrame.numElements == 3)
-                    {
-                        string[] place = new string[] { "place", "all_place" };
-                        string[] left = new string[] { "place_left", "cap_left_place" };
-                        string[] right = new string[] { "place_right", "cap_right_place" };
-                        string[] top = new string[] { "cap_top_place" };
-                        string[] bottom = new string[] { "cap_bottom_place" };
-
-                        for (
-                            int indexElement = firstFrame.firstElementIdx;
-                            indexElement < firstFrame.firstElementIdx + firstFrame.numElements;
-                            indexElement++)
-                        {
-                            //var frameElement = data.GetAnimFrameElement(indexElement);
-                            KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
-                            if (batchGroupData == null)
-                            {
-                                continue;
-                            }
-                            var frameElement = batchGroupData.GetFrameElement(indexElement);
-
-                            var newSpriteModifier = new BSpriteModifier();
-                            export.spriteModifiers.Add(newSpriteModifier);
-
-                            LoadSpriteModifier(kanimPrefix, newSpriteModifier, frameElement);
-
-                            if (left.Contains(frameElement.symbol.DebuggerDisplay))
-                            {
-                                newSpriteModifier.type = SpriteModifierType.Left;
-                                newSpriteModifier.name = kanimPrefix + "left";
-                            }
-                            else if (right.Contains(frameElement.symbol.DebuggerDisplay))
-                            {
-                                newSpriteModifier.type = SpriteModifierType.Right;
-                                newSpriteModifier.name = kanimPrefix + "right";
-                            }
-                            else if (top.Contains(frameElement.symbol.DebuggerDisplay))
-                            {
-                                newSpriteModifier.type = SpriteModifierType.Top;
-                            }
-                            else if (bottom.Contains(frameElement.symbol.DebuggerDisplay))
-                            {
-                                newSpriteModifier.type = SpriteModifierType.Bottom;
-                                newSpriteModifier.name = kanimPrefix + "bottom";
-                            }
-                            else
-                            {
-                                newSpriteModifier.type = SpriteModifierType.Place;
-                                newSpriteModifier.name = kanimPrefix + "place";
-                            }
-
-                            AddSpriteInfo(export, newSpriteModifier, data, frameElement, (isUtility || isBridge) && !isUi && !isPlace);
-                        }
-
-                    }
-                    else if (firstFrame.numElements > 3) Debug.Log("More than 2 elements : " + this.prefabId);
                 }
-
             }
 
             ExportUtilityConnection(b);
@@ -449,26 +282,6 @@ namespace OniExtract2
 
             if (b.OutputConduitType != ConduitType.None && b.UtilityOutputOffset != null)
                 utilities.Add(new UtilityInfo() { offset = new BVector2(b.UtilityOutputOffset), type = UtilityInfo.GetUtilityType(b.OutputConduitType, false), isSecondary = false });
-
-            ISecondaryInput secondaryInput = b.BuildingComplete.GetComponent<ISecondaryInput>();
-            if (secondaryInput != null)
-                utilities.Add(new UtilityInfo()
-                {
-                    //new_bandaid
-                    //offset = new BVector2(secondaryInput.GetSecondaryConduitOffset()),
-                    //type = UtilityInfo.GetUtilityType(secondaryInput.GetSecondaryConduitType(), true),
-                    //isSecondary = true
-                });
-
-            ISecondaryOutput secondaryOutput = b.BuildingComplete.GetComponent<ISecondaryOutput>();
-            if (secondaryOutput != null)
-                utilities.Add(new UtilityInfo()
-                {
-                    //new_bandaid
-                    //offset = new BVector2(secondaryOutput.GetSecondaryConduitOffset()),
-                    //type = UtilityInfo.GetUtilityType(secondaryOutput.GetSecondaryConduitType(), false),
-                    //isSecondary = true
-                });
 
             LogicPorts logicPorts = b.BuildingComplete.GetComponent<LogicPorts>();
             if (logicPorts != null)
