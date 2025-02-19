@@ -134,6 +134,22 @@ namespace OniExtract2
                     for (int indexGetAnim = 0; indexGetAnim < data.animCount; ++indexGetAnim)
                     {
                         var anim = data.GetAnim(indexGetAnim);
+                        
+                        // Skip unwanted animations
+                        if (anim.name.Contains("working") || 
+                            anim.name.Contains("pst") || 
+                            anim.name.Contains("ui") || 
+                            anim.name.Contains("place"))
+                        {
+                            continue;
+                        }
+
+                        // Only process the "off" state for static building appearance
+                        if (anim.name != "off")
+                        {
+                            continue;
+                        }
+
                         var spriteGroup = new List<BSpriteInfo>();
 
                         KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
