@@ -29,23 +29,27 @@ namespace OniExtract2
 
         public void AddSpriteInfo(BSpriteInfo sprite)
         {
-            uiSprites.Add(sprite);
-            
-            // Track relationships
-            if (sprite.relatedSprites != null && sprite.relatedSprites.Count > 0)
+            // Check if sprite already exists
+            if (!uiSprites.Any(s => s.name == sprite.name))
             {
-                spriteRelationships[sprite.name] = sprite.relatedSprites;
+                uiSprites.Add(sprite);
                 
-                // Add reverse relationships
-                foreach (var related in sprite.relatedSprites)
+                // Track relationships
+                if (sprite.relatedSprites != null && sprite.relatedSprites.Count > 0)
                 {
-                    if (!spriteRelationships.ContainsKey(related))
+                    spriteRelationships[sprite.name] = sprite.relatedSprites;
+                    
+                    // Add reverse relationships
+                    foreach (var related in sprite.relatedSprites)
                     {
-                        spriteRelationships[related] = new List<string>();
-                    }
-                    if (!spriteRelationships[related].Contains(sprite.name))
-                    {
-                        spriteRelationships[related].Add(sprite.name);
+                        if (!spriteRelationships.ContainsKey(related))
+                        {
+                            spriteRelationships[related] = new List<string>();
+                        }
+                        if (!spriteRelationships[related].Contains(sprite.name))
+                        {
+                            spriteRelationships[related].Add(sprite.name);
+                        }
                     }
                 }
             }

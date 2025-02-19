@@ -124,61 +124,64 @@ namespace OniExtract2
             foreach (var p in b.AnimFiles)
             {
                 var data = p.GetData();
-
                 if (data.build.textureCount > 0)
                 {
                     textureName = data.build.GetTexture(0).name;
                     if (OniExtract_Game_OnPrefabInit.saveBuildingTexture)
                         OniExtract_Game_OnPrefabInit.SaveTexture(textureName, data.build.GetTexture(0));
-                }
 
-                kanimPrefix = b.PrefabID + "_";
-                for (int indexGetAnim = 0; indexGetAnim < data.animCount; ++indexGetAnim)
-                {
-                    var anim = data.GetAnim(indexGetAnim);
-                    var spriteGroup = new List<BSpriteInfo>();
-
-                    KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
-                    if (!anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame))
-                        continue;
-
-                    var animationName = kanimPrefix + anim.name;
-                    bool isUi = anim.name.Equals("ui");
-                    bool isPlace = anim.name.Contains("place");
-                    bool isDefaultKanim = anim.name.Equals(this.DefaultAnimState);
-
-                    if (!isUi && !isPlace && !isUtility && !isBridge && !isDefaultKanim)
-                        continue;
-
-                    // Process all elements in the frame
-                    for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
+                    kanimPrefix = b.PrefabID + "_";
+                    for (int indexGetAnim = 0; indexGetAnim < data.animCount; ++indexGetAnim)
                     {
-                        KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
-                        if (batchGroupData == null) continue;
+                        var anim = data.GetAnim(indexGetAnim);
+                        var spriteGroup = new List<BSpriteInfo>();
 
-                        var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
-                        var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
+                        KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
+                        if (!anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame))
+                            continue;
 
-                        // Create sprite info with relationships
-                        var symbolFrameInstance = data.build.GetSymbol(frameElement.symbol).GetFrame(frameElement.frame);
-                        var spriteInfo = new BSpriteInfo(frameElementName, symbolFrameInstance, data.build.GetTexture(0));
+                        var animationName = kanimPrefix + anim.name;
+                        
+                        // Remove restrictive filtering - process all sprites
+                        // if (!isUi && !isPlace && !isUtility && !isBridge && !isDefaultKanim)
+                        //    continue;
 
-                        // Link related sprites in the same animation
-                        foreach (var existingSprite in spriteGroup)
+                        // Process all elements in the frame
+                        for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
                         {
-                            spriteInfo.AddRelatedSprite(existingSprite.name);
-                            existingSprite.AddRelatedSprite(spriteInfo.name);
-                        }
-                        spriteGroup.Add(spriteInfo);
+                            KBatchGroupData batchGroupData = KAnimBatchManager.Instance().GetBatchGroupData(data.animBatchTag);
+                            if (batchGroupData == null) continue;
 
-                        // Add to export
-                        export.AddSpriteInfo(spriteInfo);
+                            var frameElement = batchGroupData.GetFrameElement(firstFrame.firstElementIdx + indexElement);
+                            var frameElementName = animationName + "_" + indexElement.ToString() + "_" + frameElement.symbol.DebuggerDisplay;
+
+                            // Create and add sprite modifier
+                            var spriteModifier = new BSpriteModifier();
+                            spriteModifier.name = frameElementName;
+                            LoadSpriteModifier(kanimPrefix, spriteModifier, frameElement);
+                            export.spriteModifiers.Add(spriteModifier); // Ensure modifier is added to export
+                            
+                            // Add to building's sprite list
+                            this.sprites.spriteNames.Add(frameElementName);
+
+                            // Create sprite info with relationships
+                            var symbolFrameInstance = data.build.GetSymbol(frameElement.symbol).GetFrame(frameElement.frame);
+                            var spriteInfo = new BSpriteInfo(frameElementName, symbolFrameInstance, data.build.GetTexture(0));
+                            
+                            // Link related sprites
+                            foreach (var existingSprite in spriteGroup)
+                            {
+                                spriteInfo.AddRelatedSprite(existingSprite.name);
+                                existingSprite.AddRelatedSprite(spriteInfo.name);
+                            }
+                            spriteGroup.Add(spriteInfo);
+
+                            // Add to export
+                            export.AddSpriteInfo(spriteInfo);
+                        }
                     }
                 }
             }
-
-
-
 
             ExportUtilityConnection(b);
             ExportTileInfo(b, export);
@@ -263,26 +266,6 @@ namespace OniExtract2
 
             if (b.OutputConduitType != ConduitType.None && b.UtilityOutputOffset != null)
                 utilities.Add(new UtilityInfo() { offset = new BVector2(b.UtilityOutputOffset), type = UtilityInfo.GetUtilityType(b.OutputConduitType, false), isSecondary = false });
-
-            ISecondaryInput secondaryInput = b.BuildingComplete.GetComponent<ISecondaryInput>();
-            if (secondaryInput != null)
-                utilities.Add(new UtilityInfo()
-                {
-                    //new_bandaid
-                    //offset = new BVector2(secondaryInput.GetSecondaryConduitOffset()),
-                    //type = UtilityInfo.GetUtilityType(secondaryInput.GetSecondaryConduitType(), true),
-                    //isSecondary = true
-                });
-
-            ISecondaryOutput secondaryOutput = b.BuildingComplete.GetComponent<ISecondaryOutput>();
-            if (secondaryOutput != null)
-                utilities.Add(new UtilityInfo()
-                {
-                    //new_bandaid
-                    //offset = new BVector2(secondaryOutput.GetSecondaryConduitOffset()),
-                    //type = UtilityInfo.GetUtilityType(secondaryOutput.GetSecondaryConduitType(), false),
-                    //isSecondary = true
-                });
 
             LogicPorts logicPorts = b.BuildingComplete.GetComponent<LogicPorts>();
             if (logicPorts != null)
