@@ -135,17 +135,15 @@ namespace OniExtract2
                     {
                         var anim = data.GetAnim(indexGetAnim);
                         
-                        // Skip unwanted animations
-                        if (anim.name.Contains("working") || 
-                            anim.name.Contains("pst") || 
-                            anim.name.Contains("ui") || 
-                            anim.name.Contains("place"))
+                        // Skip working and post animations
+                        if (anim.name.Contains("working") || anim.name.Contains("pst"))
                         {
                             continue;
                         }
 
-                        // Only process the "off" state for static building appearance
-                        if (anim.name != "off")
+                        // Process either "off" state or UI/placement sprites
+                        bool isUiOrPlace = anim.name.Contains("ui") || anim.name.Contains("place");
+                        if (!isUiOrPlace && anim.name != "off")
                         {
                             continue;
                         }
@@ -158,10 +156,6 @@ namespace OniExtract2
 
                         var animationName = kanimPrefix + anim.name;
                         
-                        // Remove restrictive filtering - process all sprites
-                        // if (!isUi && !isPlace && !isUtility && !isBridge && !isDefaultKanim)
-                        //    continue;
-
                         // Process all elements in the frame
                         for (int indexElement = 0; indexElement < firstFrame.numElements; indexElement++)
                         {
@@ -184,6 +178,33 @@ namespace OniExtract2
                             var symbolFrameInstance = data.build.GetSymbol(frameElement.symbol).GetFrame(frameElement.frame);
                             var spriteInfo = new BSpriteInfo(frameElementName, symbolFrameInstance, data.build.GetTexture(0));
                             
+                            // Mark UI sprites appropriately
+                            if (isUiOrPlace)
+                            {
+                                spriteInfo.isIcon = anim.name.Contains("ui");
+                                spriteModifier.tags.Add(anim.name.Contains("ui") ? SpriteTag.ui : SpriteTag.place);
+                                
+                                // Create a separate sprite info for the UI/placement sprite
+                                var uiSpriteInfo = new BSpriteInfo(
+                                    spriteModifier.spriteInfoName, // Use base name without animation state
+                                    symbolFrameInstance,
+                                    data.build.GetTexture(0)
+                                );
+                                uiSpriteInfo.isIcon = spriteInfo.isIcon;
+                                export.uiSprites.Add(uiSpriteInfo);
+                                
+                                // Create a base sprite modifier without animation state
+                                var baseSpriteModifier = new BSpriteModifier();
+                                baseSpriteModifier.name = spriteModifier.spriteInfoName;
+                                baseSpriteModifier.spriteInfoName = spriteModifier.spriteInfoName;
+                                baseSpriteModifier.translation = spriteModifier.translation;
+                                baseSpriteModifier.scale = spriteModifier.scale;
+                                baseSpriteModifier.rotation = spriteModifier.rotation;
+                                baseSpriteModifier.multColour = spriteModifier.multColour;
+                                baseSpriteModifier.tags = spriteModifier.tags;
+                                export.spriteModifiers.Add(baseSpriteModifier);
+                            }
+
                             // Link related sprites
                             foreach (var existingSprite in spriteGroup)
                             {

@@ -331,17 +331,31 @@ namespace OniExtract2
 
             private static void ExportSprites(Export export)
             {
-                // Some useful sprites
+                // Base useful sprites that we always want
                 var usefulSprites = new List<string>() {
-                "logicInput",
-                "logicOutput",
-                "input",
-                "output",
-                "electrical_disconnected",
-                "logic_ribbon_all_in",
-                "logic_ribbon_all_out",
-                "logicResetUpdate"
-            };
+                    "logicInput",
+                    "logicOutput",
+                    "input",
+                    "output",
+                    "electrical_disconnected",
+                    "logic_ribbon_all_in",
+                    "logic_ribbon_all_out",
+                    "logicResetUpdate"
+                };
+
+                // Get category icons dynamically from the build menu
+                var categoryIcons = TUNING.BUILDINGS.PLANORDER
+                    .Select(category => BuildMenuCategory.GetIcon(category.category.HashValue))
+                    .Where(icon => !string.IsNullOrEmpty(icon))
+                    .Distinct()
+                    .ToList();
+
+                Debug.Log("Found category icons:");
+                foreach (var icon in categoryIcons)
+                {
+                    Debug.Log($"  {icon}");
+                    usefulSprites.Add(icon);
+                }
 
                 var textureDic = new Dictionary<string, string>();
                 Debug.Log("*************");
@@ -349,24 +363,18 @@ namespace OniExtract2
                 foreach (var key in Assets.Sprites.Keys)
                 {
                     var sprite = Assets.Sprites[key];
-
-
-
                     Debug.Log(sprite.name);
+
                     bool isUseful = usefulSprites.Contains(sprite.name);
-                    bool isMenuIcon = sprite.name.Contains("icon_category") && !sprite.name.Contains("disabled");
 
                     // We only want some sprites
-                    if (!saveAllSprites && !isUseful && !isMenuIcon) continue;
+                    if (!saveAllSprites && !isUseful) continue;
 
                     var texId = sprite.texture.GetNativeTexturePtr().ToString();
                     if (!textureDic.Keys.Contains(texId))
                         textureDic.Add(texId, sprite.name);
 
                     var texName = textureDic[texId];
-
-                    //Debug.Log(sprite.name + " : " + texName + " : " +
-                    //    sprite.textureRect.x + ";" + sprite.textureRect.y + ";" + sprite.textureRect.width + ";" + sprite.textureRect.height);
 
                     if (saveIconTexture && sprite.texture != null) SaveTexture(texName, sprite.texture);
 
