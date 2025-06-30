@@ -251,6 +251,7 @@ namespace OniExtract2
                             Debug.Log("ERROR SAVING SPRITEINFO " + frameElement.symbol.DebuggerDisplay);
                             Debug.Log("frameElement.frame : " + frameElement.frame.ToString());
                             Debug.Log("s.frameLookup.Length : " + s.frameLookup.Length.ToString());
+                            Debug.Log("Exception: " + ex.Message);
                             return false;
                         }
 

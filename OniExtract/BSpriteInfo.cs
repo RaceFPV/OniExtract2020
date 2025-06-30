@@ -47,12 +47,12 @@ namespace OniExtract2
                 {
                     uvMin = new BVector2(
                         (float)Math.Floor(symbolFrame.Value.uvMin.x * texture.width),
-                        (float)Math.Floor((1 - symbolFrame.Value.uvMax.y) * texture.height)
+                        (float)Math.Floor((1 - symbolFrame.Value.uvMin.y) * texture.height)
                     );
 
                     uvSize = new BVector2(
                         (float)Math.Ceiling((symbolFrame.Value.uvMax.x - symbolFrame.Value.uvMin.x) * texture.width),
-                        (float)Math.Ceiling((symbolFrame.Value.uvMax.y - symbolFrame.Value.uvMin.y) * texture.height)
+                        (float)Math.Ceiling((symbolFrame.Value.uvMin.y - symbolFrame.Value.uvMax.y) * texture.height)
                     );
 
                     var framePivot = new BVector2(
