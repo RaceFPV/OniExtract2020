@@ -98,23 +98,11 @@ namespace OniExtract2
             this.textureName = textureName;
             this.relatedSprites = new List<string>();
             isIcon = true;
-
-            if (texture != null)
-            {
-                uvMin = new BVector2(
-                    (float)Math.Floor(sprite.textureRect.x),
-                    (float)Math.Floor(texture.height - sprite.textureRect.y - sprite.textureRect.height)
-                );
-                uvSize = new BVector2(
-                    (float)Math.Ceiling(sprite.textureRect.width),
-                    (float)Math.Ceiling(sprite.textureRect.height)
-                );
-                realSize = new BVector2(uvSize.x, uvSize.y);
-                pivot = new BVector2(
-                    sprite.pivot.x / uvSize.x,
-                    sprite.pivot.y / uvSize.y
-                );
-            }
+            
+            uvMin = new BVector2((float)Math.Round(sprite.textureRect.x), (float)Math.Round(texture.height - sprite.textureRect.y - sprite.textureRect.height));
+            uvSize = new BVector2((float)Math.Round(sprite.textureRect.width), (float)Math.Round(sprite.textureRect.height));
+            realSize = new BVector2((float)Math.Round(sprite.textureRect.width), (float)Math.Round(sprite.textureRect.height));
+            pivot = new BVector2(sprite.pivot.x / uvSize.x, sprite.pivot.y / uvSize.y);
         }
 
         public void AddRelatedSprite(string spriteName)
