@@ -423,11 +423,20 @@ namespace OniExtract2
             private static void ExportElements(Export export)
             {
                 export.elements = new List<BElement>();
+                
+                // Initialize the element extraction log file
+                BElement.StartNewExtractionLog();
+                
                 foreach (var e in ElementLoader.elements)
                 {
                     var element = new BElement(e, export);
-
                 }
+                
+                // Log final summary
+                BElement.LogToFile("=================================================================");
+                BElement.LogToFile($"EXTRACTION COMPLETE - Total elements processed: {ElementLoader.elements.Count}");
+                BElement.LogToFile($"Total UI sprites extracted: {export.uiSprites.Count(s => s.name.Contains("_ui_0"))}");
+                BElement.LogToFile("=================================================================");
             }
 
             private static void Postfix()

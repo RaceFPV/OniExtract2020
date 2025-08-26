@@ -78,7 +78,18 @@ namespace OniExtract2
         element_gas_front,
         element_liquid_back,
         element_liquid_front,
-        element_vacuum_front
+        element_vacuum_front,
+        // Additional utility tags for better organization
+        utility_electric,
+        utility_gas,
+        utility_liquid,
+        utility_automation,
+        utility_solid,
+        utility_conveyor,
+        wire_solid,
+        wire_place,
+        conduit_solid,
+        conduit_place
     }
 
 

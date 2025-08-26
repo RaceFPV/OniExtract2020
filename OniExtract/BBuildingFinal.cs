@@ -135,24 +135,65 @@ namespace OniExtract2
                     {
                         var anim = data.GetAnim(indexGetAnim);
                         
-                        // Skip working and post animations
+                        // Debug logging for utility buildings (wires, pipes, conduits)
+                        bool isUtilityBuilding = isUtility || isBridge || 
+                                                b.PrefabID.Contains("Wire") || 
+                                                b.PrefabID.Contains("Conduit") || 
+                                                b.PrefabID.Contains("Vent") ||
+                                                b.PrefabID.Contains("Pipe");
+                        
+                        if (isUtilityBuilding)
+                        {
+                            Debug.Log($"UTILITY DEBUG: Building={b.PrefabID}, Animation={anim.name}");
+                        }
+                        
+                        // Skip working and post animations (but keep other states)
                         if (anim.name.Contains("working") || anim.name.Contains("pst"))
                         {
                             continue;
                         }
 
-                        // Process either "off" state or UI/placement sprites
+                        // Comprehensive animation filtering for all building types
                         bool isUiOrPlace = anim.name.Contains("ui") || anim.name.Contains("place");
-                        if (!isUiOrPlace && anim.name != "off")
+                        bool isMainState = anim.name == "off" || anim.name == "on";
+                        
+                        // Utility/conduit specific animations (these are the missing solid sprites!)
+                        bool isUtilityAnimation = anim.name.Contains("electric") || 
+                                                 anim.name.Contains("gas") || 
+                                                 anim.name.Contains("liquid") || 
+                                                 anim.name.Contains("automation") ||
+                                                 anim.name.Contains("solid") ||
+                                                 anim.name.Contains("conveyor");
+                        
+                        // Connection-based animations for tiles and conduits
+                        bool isConnectionAnimation = anim.name.Contains("L") || anim.name.Contains("R") || 
+                                                   anim.name.Contains("U") || anim.name.Contains("D") ||
+                                                   anim.name.Contains("LRUD") || anim.name.Contains("LR") ||
+                                                   anim.name.Contains("UD") || anim.name.Contains("noConnection");
+                        
+                        // For utility buildings, capture ALL relevant animations including solid variants
+                        bool shouldProcessUtility = isUtilityBuilding && (isUiOrPlace || isMainState || isUtilityAnimation || isConnectionAnimation);
+                        
+                        // For regular buildings, use standard filtering
+                        bool shouldProcessRegular = !isUtilityBuilding && (isUiOrPlace || isMainState);
+                        
+                        if (!shouldProcessUtility && !shouldProcessRegular)
                         {
                             continue;
                         }
-
+                        
                         var spriteGroup = new List<BSpriteInfo>();
 
                         KAnim.Anim.Frame firstFrame = new KAnim.Anim.Frame();
                         if (!anim.TryGetFrame(anim.animFile.animBatchTag, 0, out firstFrame))
                             continue;
+
+                        // Enhanced debug logging for utility buildings
+                        if (isUtilityBuilding)
+                        {
+                            Debug.Log($"UTILITY DEBUG: Processing animation '{anim.name}' for {b.PrefabID} (UI/Place: {isUiOrPlace}, Main: {isMainState}, Utility: {isUtilityAnimation}, Connection: {isConnectionAnimation})");
+                            Debug.Log($"UTILITY DEBUG: Animation has {firstFrame.numElements} elements");
+                        }
 
                         var animationName = kanimPrefix + anim.name;
                         
@@ -169,10 +210,91 @@ namespace OniExtract2
                             var spriteModifier = new BSpriteModifier();
                             spriteModifier.name = frameElementName;
                             LoadSpriteModifier(kanimPrefix, spriteModifier, frameElement);
-                            export.spriteModifiers.Add(spriteModifier); // Ensure modifier is added to export
+                            
+                            // Enhanced sprite tagging for proper solid/place distinction
+                            if (isUiOrPlace)
+                            {
+                                if (anim.name.Contains("ui"))
+                                {
+                                    spriteModifier.tags.Add(SpriteTag.ui);
+                                }
+                                else if (anim.name.Contains("place"))
+                                {
+                                    spriteModifier.tags.Add(SpriteTag.place);
+                                    
+                                    // Add specific place tags for utilities
+                                    if (isUtilityBuilding)
+                                    {
+                                        if (b.PrefabID.Contains("Wire"))
+                                            spriteModifier.tags.Add(SpriteTag.wire_place);
+                                        else if (b.PrefabID.Contains("Conduit"))
+                                            spriteModifier.tags.Add(SpriteTag.conduit_place);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // This is a solid/built sprite - CRITICAL for wire rendering!
+                                spriteModifier.tags.Add(SpriteTag.solid);
+                                
+                                // Add specific utility tags for better organization and filtering
+                                if (isUtilityAnimation)
+                                {
+                                    if (anim.name.Contains("electric"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_electric);
+                                        if (b.PrefabID.Contains("Wire"))
+                                            spriteModifier.tags.Add(SpriteTag.wire_solid);
+                                    }
+                                    else if (anim.name.Contains("gas"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_gas);
+                                        if (b.PrefabID.Contains("Conduit"))
+                                            spriteModifier.tags.Add(SpriteTag.conduit_solid);
+                                    }
+                                    else if (anim.name.Contains("liquid"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_liquid);
+                                        if (b.PrefabID.Contains("Conduit"))
+                                            spriteModifier.tags.Add(SpriteTag.conduit_solid);
+                                    }
+                                    else if (anim.name.Contains("automation"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_automation);
+                                        if (b.PrefabID.Contains("Wire"))
+                                            spriteModifier.tags.Add(SpriteTag.wire_solid);
+                                    }
+                                    else if (anim.name.Contains("solid"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_solid);
+                                        if (b.PrefabID.Contains("Conduit"))
+                                            spriteModifier.tags.Add(SpriteTag.conduit_solid);
+                                    }
+                                    else if (anim.name.Contains("conveyor"))
+                                    {
+                                        spriteModifier.tags.Add(SpriteTag.utility_conveyor);
+                                    }
+                                }
+                                
+                                // Add connection tags for tileable sprites
+                                if (isConnectionAnimation)
+                                {
+                                    spriteModifier.tags.Add(SpriteTag.connection);
+                                    spriteModifier.tags.Add(SpriteTag.tileable);
+                                }
+                            }
+                            
+                            export.spriteModifiers.Add(spriteModifier);
                             
                             // Add to building's sprite list
                             this.sprites.spriteNames.Add(frameElementName);
+                            
+                            // Debug logging for utility sprite creation
+                            if (isUtilityBuilding)
+                            {
+                                var tagString = string.Join(", ", spriteModifier.tags);
+                                Debug.Log($"UTILITY DEBUG: Created sprite '{frameElementName}' with tags: [{tagString}]");
+                            }
 
                             // Create sprite info with relationships
                             var symbolFrameInstance = data.build.GetSymbol(frameElement.symbol).GetFrame(frameElement.frame);
@@ -182,7 +304,6 @@ namespace OniExtract2
                             if (isUiOrPlace)
                             {
                                 spriteInfo.isIcon = anim.name.Contains("ui");
-                                spriteModifier.tags.Add(anim.name.Contains("ui") ? SpriteTag.ui : SpriteTag.place);
                                 
                                 // Create a separate sprite info for the UI/placement sprite
                                 var uiSpriteInfo = new BSpriteInfo(

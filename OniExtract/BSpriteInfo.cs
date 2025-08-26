@@ -28,6 +28,46 @@ namespace OniExtract2
             this.relatedSprites = new List<string>();
         }
 
+        public BSpriteInfo(string name, KAnim.Build.SymbolFrameInstance symbolFrame, Texture2D texture)
+        {
+            this.name = name;
+            this.isIcon = name.Contains("_ui");
+            textureName = texture.name;
+            this.relatedSprites = new List<string>();
+            
+            uvMin = new BVector2((float)Math.Round(symbolFrame.uvMin.x * texture.width), (float)Math.Round((1 - symbolFrame.uvMin.y) * texture.height));
+            uvSize = new BVector2(
+                (float)Math.Round((symbolFrame.uvMax.x - symbolFrame.uvMin.x) * texture.width),
+                (float)Math.Round((symbolFrame.uvMin.y - symbolFrame.uvMax.y) * texture.height)
+                );
+
+            var framePivot = new BVector2(
+                (symbolFrame.bboxMax.x + symbolFrame.bboxMin.x) / 2,
+                (symbolFrame.bboxMax.y + symbolFrame.bboxMin.y) / 2
+                );
+
+            var framePivotSize = new BVector2(
+                (symbolFrame.bboxMax.x - symbolFrame.bboxMin.x),
+                (symbolFrame.bboxMax.y - symbolFrame.bboxMin.y)
+                );
+
+            // From KParser2
+            var xy = new BVector2(
+                framePivot.x - framePivotSize.x / 2f,
+                framePivot.y - framePivotSize.y / 2f
+                );
+
+            pivot = new BVector2(
+                0 - xy.x / framePivotSize.x,
+                1 + xy.y / framePivotSize.y
+                );
+
+            realSize = new BVector2(
+                (framePivotSize.x / 2),
+                (framePivotSize.y / 2)
+                );
+        }
+
         public BSpriteInfo(string name, KAnim.Build.SymbolFrameInstance? symbolFrame, Texture2D texture)
         {
             this.name = name;
